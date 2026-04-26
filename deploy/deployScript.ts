@@ -1,16 +1,34 @@
 import { readFileSync } from "fs";
 import path from "path";
-import {
+import { fileURLToPath } from "url";
+import { createAccount, createClient } from "genlayer-js";
+import { localnet, studionet } from "genlayer-js/chains";
+import { TransactionStatus } from "genlayer-js/types";
+import type {
   TransactionHash,
-  TransactionStatus,
   GenLayerClient,
   DecodedDeployData,
   GenLayerChain,
 } from "genlayer-js/types";
-import { localnet } from "genlayer-js/chains";
+
+const DEFAULT_RPC_URL =
+  process.env.GENLAYER_RPC_URL || "http://127.0.0.1:4000/api";
+const DEFAULT_NETWORK = process.env.GENLAYER_NETWORK || "localnet";
+
+function getChain() {
+  return DEFAULT_NETWORK === "studionet" ? studionet : localnet;
+}
+
+function getAccount() {
+  const privateKey = process.env.GENLAYER_PRIVATE_KEY as
+    | `0x${string}`
+    | undefined;
+
+  return privateKey ? createAccount(privateKey) : createAccount();
+}
 
 export default async function main(client: GenLayerClient<any>) {
-  const filePath = path.resolve(process.cwd(), "contracts/football_bets.py");
+  const filePath = path.resolve(process.cwd(), "contracts/gen_escrow.py");
 
   try {
     const contractCode = new Uint8Array(readFileSync(filePath));
@@ -24,7 +42,7 @@ export default async function main(client: GenLayerClient<any>) {
 
     const receipt = await client.waitForTransactionReceipt({
       hash: deployTransaction as TransactionHash,
-      status: TransactionStatus.ACCEPTED,
+      status: TransactionStatus.FINALIZED,
       retries: 200,
     });
 
@@ -46,4 +64,21 @@ export default async function main(client: GenLayerClient<any>) {
   } catch (error) {
     throw new Error(`Error during deployment:, ${error}`);
   }
+}
+
+async function runDirectly() {
+  const client = createClient({
+    chain: getChain(),
+    endpoint: DEFAULT_RPC_URL,
+    account: getAccount(),
+  });
+
+  await main(client);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  runDirectly().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
 }
