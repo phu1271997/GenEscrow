@@ -1,6 +1,6 @@
 import { createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import type { Job, TransactionReceipt } from "./types";
+import type { Job, Appeal, TransactionReceipt } from "./types";
 
 class GenEscrowContract {
   private contractAddress: `0x${string}`;
@@ -125,6 +125,55 @@ class GenEscrowContract {
         value: BigInt(0),
       });
       return await this.client.waitForTransactionReceipt({ hash: txHash, status: "ACCEPTED" as any, retries: 24, interval: 5000 }) as TransactionReceipt;
+  }
+
+  async requestAppeal(jobId: string, stake: number): Promise<TransactionReceipt> {
+      const txHash = await this.client.writeContract({
+        address: this.contractAddress,
+        functionName: "request_appeal",
+        args: [jobId, stake],
+        value: BigInt(0),
+      });
+      return await this.client.waitForTransactionReceipt({ hash: txHash, status: "ACCEPTED" as any, retries: 24, interval: 5000 }) as TransactionReceipt;
+  }
+
+  async resolveAppeal(jobId: string): Promise<TransactionReceipt> {
+      const txHash = await this.client.writeContract({
+        address: this.contractAddress,
+        functionName: "resolve_appeal",
+        args: [jobId],
+        value: BigInt(0),
+      });
+      return await this.client.waitForTransactionReceipt({ hash: txHash, status: "ACCEPTED" as any, retries: 24, interval: 5000 }) as TransactionReceipt;
+  }
+
+  async getAppeal(jobId: string): Promise<Appeal | null> {
+    try {
+      const appealData: any = await this.client.readContract({
+        address: this.contractAddress,
+        functionName: "get_appeal",
+        args: [jobId],
+      });
+
+      if (!appealData) return null;
+
+      if (appealData instanceof Map) {
+         const obj = Array.from((appealData as any).entries()).reduce((acc: any, [key, val]: any) => {
+             acc[key] = val;
+             return acc;
+         }, {});
+         return obj as Appeal;
+      }
+      
+      if (typeof appealData === 'object') {
+         return appealData as Appeal;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching appeal:", error);
+      return null;
+    }
   }
 }
 

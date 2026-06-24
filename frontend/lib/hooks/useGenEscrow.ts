@@ -6,7 +6,7 @@ import GenEscrowContract from "../contracts/GenEscrow";
 import { getContractAddress, getStudioUrl } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
 import { success, error, configError } from "../utils/toast";
-import type { Job } from "../contracts/types";
+import type { Job, Appeal } from "../contracts/types";
 
 export function useGenEscrowContract(): GenEscrowContract | null {
   const { address } = useWallet();
@@ -73,7 +73,7 @@ export function useJobAction() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ action, jobId, url }: { action: string; jobId: string; url?: string }) => {
+    mutationFn: async ({ action, jobId, url, stake }: { action: string; jobId: string; url?: string; stake?: number }) => {
       if (!contract) throw new Error("Contract not configured.");
       if (!address) throw new Error("Wallet not connected.");
 
@@ -89,17 +89,39 @@ export function useJobAction() {
           return contract.disputeJob(jobId);
         case "resolve":
           return contract.resolveDispute(jobId);
+        case "appeal":
+          if (stake === undefined || stake <= 0) throw new Error("Valid appeal stake is required");
+          return contract.requestAppeal(jobId, stake);
+        case "resolve_appeal":
+          return contract.resolveAppeal(jobId);
         default:
           throw new Error("Unknown action");
       }
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["appeal", variables.jobId] });
       success(`Action ${variables.action} successful!`);
     },
     onError: (err: any, variables) => {
       console.error(err);
       error(`Failed to ${variables.action}`, { description: err?.message });
     },
+  });
+}
+
+export function useAppeal(jobId: string) {
+  const contract = useGenEscrowContract();
+
+  return useQuery<Appeal | null, Error>({
+    queryKey: ["appeal", jobId],
+    queryFn: () => {
+      if (!contract || !jobId) {
+        return Promise.resolve(null);
+      }
+      return contract.getAppeal(jobId);
+    },
+    enabled: !!contract && !!jobId,
+    staleTime: 5000,
   });
 }

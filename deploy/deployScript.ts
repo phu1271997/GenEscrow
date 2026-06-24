@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createAccount, createClient } from "genlayer-js";
@@ -61,8 +61,18 @@ export default async function main(client: GenLayerClient<any>) {
         : (receipt.txDataDecoded as DecodedDeployData)?.contractAddress;
 
     console.log(`Contract deployed at address: ${deployedContractAddress}`);
+
+    // Write contract address to frontend/.env
+    const envPath = path.resolve(process.cwd(), "frontend/.env");
+    const envContent = `NEXT_PUBLIC_CONTRACT_ADDRESS=${deployedContractAddress}\nNEXT_PUBLIC_STUDIO_URL=${DEFAULT_RPC_URL}\n`;
+    try {
+      writeFileSync(envPath, envContent);
+      console.log(`Successfully saved contract address to ${envPath}`);
+    } catch (e) {
+      console.error(`Failed to write contract address to ${envPath}:`, e);
+    }
   } catch (error) {
-    throw new Error(`Error during deployment:, ${error}`);
+    throw new Error(`Error during deployment: ${error}`);
   }
 }
 
