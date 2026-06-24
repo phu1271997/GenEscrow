@@ -49,8 +49,11 @@ export default async function main(client: GenLayerClient<any>) {
     if (
       receipt.status !== 5 &&
       receipt.status !== 6 &&
+      receipt.status !== 7 &&
       receipt.statusName !== "ACCEPTED" &&
-      receipt.statusName !== "FINALIZED"
+      receipt.statusName !== "FINALIZED" &&
+      receipt.status_name !== "ACCEPTED" &&
+      receipt.status_name !== "FINALIZED"
     ) {
       throw new Error(`Deployment failed. Receipt: ${JSON.stringify(receipt)}`);
     }
