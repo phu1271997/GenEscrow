@@ -18,7 +18,7 @@ class Job:
     submission_url: str
     status: str
     verdict: str
-    freelancer_pct: int
+    freelancer_pct: u256
     reason: str
 
 @allow_storage
@@ -26,7 +26,7 @@ class Job:
 class Appeal:
     job_id: str
     appealer: str
-    stake: int
+    stake: u256
     previous_verdict: str
     final_verdict: str
     status: str  # "PENDING", "UPHELD", "OVERTURNED"
@@ -302,7 +302,7 @@ The 'reason' string can be different.
         job.reason = result_json["reason"]
 
     @gl.public.write
-    def request_appeal(self, job_id: str, stake: int) -> None:
+    def request_appeal(self, job_id: str, stake: u256) -> None:
         if job_id not in self.jobs:
             raise Exception("Job not found")
         job = self.jobs[job_id]
